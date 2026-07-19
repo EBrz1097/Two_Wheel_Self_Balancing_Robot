@@ -19,6 +19,7 @@
 "stm32-bluepill\stm32f1xx_hal_tim_ex.o"
 "stm32-bluepill\stm32f1xx_hal_uart.o"
 "stm32-bluepill\system_stm32f1xx.o"
+"stm32-bluepill\mpu6050.o"
 --strict --scatter "stm32-bluepill\stm32-bluepill.sct"
 --summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
 --info sizes --info totals --info unused --info veneers

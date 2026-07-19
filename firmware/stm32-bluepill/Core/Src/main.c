@@ -22,7 +22,8 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "stdio.h"
-
+#include "mpu6050.h"
+#include "string.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,10 +45,15 @@
 I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 UART_HandleTypeDef huart1;
 
 /* USER CODE BEGIN PV */
+
+MPU6050_t mpu_data;
+uint8_t f_mpu=0;
+float dt = 0.01;
 
 /* USER CODE END PV */
 
@@ -57,6 +63,7 @@ static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_TIM3_Init(void);
 static void MX_USART1_UART_Init(void);
+static void MX_TIM4_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -71,6 +78,15 @@ int fputc(int ch, FILE *f){
   return ch;
 }
 // printf Re-Director End
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	if(htim->Instance == TIM4)
+	{
+		f_mpu = 1;
+	}
+}
+
 
 /* USER CODE END 0 */
 
@@ -106,16 +122,61 @@ int main(void)
   MX_I2C1_Init();
   MX_TIM3_Init();
   MX_USART1_UART_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
+	
+	(MPU6050_Init(&hi2c1))?(printf("MPU6050 Successfully Initialized!\r\n")):(printf("MPU6050 Not Initialized!\r\n"));
+	
+	HAL_Delay(100);
+	
+	printf("Keep sensor still... calibrating gyro!!\r\n");
+	MPU6050_Calibrate_Gyro(&hi2c1, &mpu_data);
+	printf("Calibration Completed! ... Gx_Offset:%.2f\r\n", mpu_data.Gx_offset);
 
+	MPU6050_Read_All(&hi2c1, &mpu_data);
+	MPU6050_ComputePitch(&hi2c1, &mpu_data, dt);
+
+	mpu_data.pitch = mpu_data.pitch_acc;
+	printf("Pitch:%.2f, Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
+		
+	HAL_TIM_Base_Start_IT(&htim4);	
+	
+	
+//	// I2C Device Address Check Begin
+//	for(uint8_t i = 1; i < 128; i++)
+//		{
+//				if(HAL_I2C_IsDeviceReady(&hi2c1, i << 1, 2, 100) == HAL_OK)
+//				{
+//						printf("Device found at 0x%02X\r\n", i);
+//				}
+//		}
+//	// I2C Device Address Check End
+		
+	 uint8_t i = 0;
+	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		printf("Connection Test!\r\n");
-		HAL_Delay(1000);
+		if(f_mpu)
+		{
+			f_mpu = 0;
+			MPU6050_Read_All(&hi2c1, &mpu_data);
+			
+		//		printf("Ax:%.2f, Ay:%.2f, Az:%.2f, Gx:%.2f, Gy:%.2f, Gz:%.2f\r\n", mpu_data.Ax, mpu_data.Ay, mpu_data.Az,
+		//						mpu_data.Gx, mpu_data.Gy, mpu_data.Gz);
+				
+			MPU6050_ComputePitch(&hi2c1, &mpu_data, dt);
+			
+//			if(i==10){
+//				i = 0;
+//				printf("Pitch:%.2f, Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
+//			}
+//			i++;
+		}
+		
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -256,6 +317,51 @@ static void MX_TIM3_Init(void)
 
   /* USER CODE END TIM3_Init 2 */
   HAL_TIM_MspPostInit(&htim3);
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 7200-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 100-1;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
 
 }
 

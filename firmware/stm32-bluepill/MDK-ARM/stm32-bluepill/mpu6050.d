@@ -1,4 +1,4 @@
-stm32-bluepill/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
+stm32-bluepill/mpu6050.o: ..\Core\Src\mpu6050.c ..\Core\Inc\mpu6050.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal.h \
   ..\Core\Inc\stm32f1xx_hal_conf.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_rcc.h \
@@ -29,5 +29,4 @@ stm32-bluepill/main.o: ..\Core\Src\main.c ..\Core\Inc\main.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_tim.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_tim_ex.h \
   ..\Drivers\STM32F1xx_HAL_Driver\Inc\stm32f1xx_hal_uart.h \
-  C:\Keil_v5\ARM\ARMCLANG\include\stdio.h ..\Core\Inc\mpu6050.h \
-  C:\Keil_v5\ARM\ARMCLANG\include\string.h
+  C:\Keil_v5\ARM\ARMCLANG\include\math.h
