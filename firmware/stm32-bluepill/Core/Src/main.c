@@ -24,6 +24,7 @@
 #include "stdio.h"
 #include "mpu6050.h"
 #include "string.h"
+#include "motor.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -140,7 +141,7 @@ int main(void)
 	printf("Pitch:%.2f, Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
 		
 	HAL_TIM_Base_Start_IT(&htim4);	
-	
+	Motor_Init();
 	
 //	// I2C Device Address Check Begin
 //	for(uint8_t i = 1; i < 128; i++)
@@ -153,6 +154,18 @@ int main(void)
 //	// I2C Device Address Check End
 		
 	 uint8_t i = 0;
+	 
+	 
+	 
+	 Motor_SetLeft(999);
+   Motor_SetRight(999);
+	 HAL_Delay(20000);
+	 Motor_StopAll();
+	 HAL_Delay(1000);
+	 Motor_SetLeft(-999);
+	 Motor_SetRight(-999);
+	 HAL_Delay(20000);
+	 Motor_StopAll();
 	
   /* USER CODE END 2 */
 
