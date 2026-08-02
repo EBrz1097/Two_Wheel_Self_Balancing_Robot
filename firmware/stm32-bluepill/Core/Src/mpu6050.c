@@ -2,6 +2,8 @@
 #include "mpu6050.h"
 #include "math.h"
 
+extern float dt;
+
 uint8_t MPU6050_Init(I2C_HandleTypeDef *I2Cx)
 {
 	uint8_t check, data;
@@ -88,4 +90,19 @@ void MPU6050_Calibrate_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct)
 		HAL_Delay(5);
 	}
 	dataStruct->Gx_offset = (Gx_Sum)/samples;
+}
+
+void MPU6050_Calculate_PitchOffset(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct)
+{
+	float pitch_sum = 0;
+	const int samples = 1000;
+	
+	for(int i=0;i<samples;i++)
+	{
+		MPU6050_Read_All(I2Cx, dataStruct);
+		MPU6050_ComputePitch(I2Cx, dataStruct, dt);
+		pitch_sum += dataStruct->pitch_acc;
+		HAL_Delay(5);
+	}
+	dataStruct->pitch_offset = (pitch_sum)/samples;
 }

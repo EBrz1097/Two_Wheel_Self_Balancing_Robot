@@ -25,10 +25,17 @@
 #include "mpu6050.h"
 #include "string.h"
 #include "motor.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+
+#define MAX_CONTROL_ANG			30.0f
+#define SET_POINT						0.0f
+#define MOTOR_LIMIT 				800
+#define MAX_INTEGRAL				200.0f
+
 
 /* USER CODE END PTD */
 
@@ -53,9 +60,15 @@ UART_HandleTypeDef huart1;
 /* USER CODE BEGIN PV */
 
 MPU6050_t mpu_data;
-uint8_t f_mpu=0;
+uint8_t f=0;
 float dt = 0.01;
 
+float error;
+float u;
+float Kp = 30.0f;
+float Kd = 3.0;
+float Ki = 5.0f;
+float integral = 0.0f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -72,7 +85,7 @@ static void MX_TIM4_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
-// printf Re-Director Begin
+// printf Re-Director Beginsecffgty6
 FILE __stdout;
 int fputc(int ch, FILE *f){
 	HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, HAL_MAX_DELAY);
@@ -84,7 +97,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim->Instance == TIM4)
 	{
-		f_mpu = 1;
+		f = 1;
 	}
 }
 
@@ -126,22 +139,45 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 	
-	(MPU6050_Init(&hi2c1))?(printf("MPU6050 Successfully Initialized!\r\n")):(printf("MPU6050 Not Initialized!\r\n"));
-	
+	if(MPU6050_Init(&hi2c1))
+	{
+		HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_RESET);
+		printf("MPU6050 Successfully Initialized!\r\n");
+		HAL_Delay(1000);
+		HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_SET);
+		HAL_Delay(1000);
+	}else
+	{
+		printf("MPU6050 Not Initialized!\r\n");
+		Error_Handler();
+	}
 	HAL_Delay(100);
 	
-	printf("Keep sensor still... calibrating gyro!!\r\n");
+	HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_RESET);
+	printf("Keep sensor still!... calibrating gyro!!\r\n");
 	MPU6050_Calibrate_Gyro(&hi2c1, &mpu_data);
-	printf("Calibration Completed! ... Gx_Offset:%.2f\r\n", mpu_data.Gx_offset);
+	printf("Gyro calibration completed!...Gx_Offset:%.2f\r\n", mpu_data.Gx_offset);
 
 	MPU6050_Read_All(&hi2c1, &mpu_data);
 	MPU6050_ComputePitch(&hi2c1, &mpu_data, dt);
 
 	mpu_data.pitch = mpu_data.pitch_acc;
-	printf("Pitch:%.2f, Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
-		
-	HAL_TIM_Base_Start_IT(&htim4);	
-	Motor_Init();
+	printf("Inital Pitch:%.2f, Initial Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
+	
+	HAL_Delay(1000);
+	HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_SET);
+	HAL_Delay(1000);
+	
+	HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_RESET);
+	printf("Keep sensor upright!...calibrating pitch!!\r\n");
+	HAL_Delay(3000);
+	MPU6050_Calculate_PitchOffset(&hi2c1, &mpu_data);
+	printf("Pitch calibration comleted!...Pitch_Offset:%.2f\r\n", mpu_data.pitch_offset);
+	
+	HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_SET);
+	
+	HAL_TIM_Base_Start_IT(&htim4);   	
+	Motor_Init();    
 	
 //	// I2C Device Address Check Begin
 //	for(uint8_t i = 1; i < 128; i++)
@@ -153,29 +189,18 @@ int main(void)
 //		}
 //	// I2C Device Address Check End
 		
+
+
 	 uint8_t i = 0;
-	 
-	 
-	 
-	 Motor_SetLeft(999);
-   Motor_SetRight(999);
-	 HAL_Delay(20000);
-	 Motor_StopAll();
-	 HAL_Delay(1000);
-	 Motor_SetLeft(-999);
-	 Motor_SetRight(-999);
-	 HAL_Delay(20000);
-	 Motor_StopAll();
-	
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-		if(f_mpu)
+		if(f)
 		{
-			f_mpu = 0;
+			f = 0;
 			MPU6050_Read_All(&hi2c1, &mpu_data);
 			
 		//		printf("Ax:%.2f, Ay:%.2f, Az:%.2f, Gx:%.2f, Gy:%.2f, Gz:%.2f\r\n", mpu_data.Ax, mpu_data.Ay, mpu_data.Az,
@@ -183,11 +208,42 @@ int main(void)
 				
 			MPU6050_ComputePitch(&hi2c1, &mpu_data, dt);
 			
-//			if(i==10){
-//				i = 0;
-//				printf("Pitch:%.2f, Pitch_Accel:%.2f, Gx:%.2f\r\n", mpu_data.pitch, mpu_data.pitch_acc, mpu_data.Gx);
-//			}
-//			i++;
+			if(fabs(mpu_data.pitch) > 40.0f)
+			{
+				Motor_StopAll();
+			}else
+			{					
+				error = (SET_POINT + mpu_data.pitch_offset) - (mpu_data.pitch);
+				
+				integral += error * dt;
+				if(integral < -MAX_INTEGRAL) integral = -MAX_INTEGRAL;
+				if(integral > MAX_INTEGRAL)  integral =  MAX_INTEGRAL;
+				
+				if(fabsf(error) < 1.5f)
+				{
+					Motor_StopAll();
+					u = 0;
+				}else
+				{					
+					u = Kp * error
+					  + Kd * mpu_data.Gx
+					  + Ki * integral;
+					
+					if(u > MOTOR_LIMIT) u = MOTOR_LIMIT;
+					if(u < -MOTOR_LIMIT) u = -MOTOR_LIMIT;
+					
+					Motor_SetLeft(-u);
+					Motor_SetRight(-u);
+				}
+			}
+			
+			if(i==10)
+			{
+				i = 0;
+				printf("Pitch:%.2f, error:%.2f, integral:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, integral, u);
+			}
+			
+			i++;
 		}
 		
     /* USER CODE END WHILE */
@@ -423,12 +479,23 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GLED_GPIO_Port, GLED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, IN1_Pin|IN2_Pin|IN3_Pin|IN4_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin : GLED_Pin */
+  GPIO_InitStruct.Pin = GLED_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GLED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : IN1_Pin IN2_Pin IN3_Pin IN4_Pin */
   GPIO_InitStruct.Pin = IN1_Pin|IN2_Pin|IN3_Pin|IN4_Pin;

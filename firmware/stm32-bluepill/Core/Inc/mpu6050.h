@@ -39,6 +39,7 @@ typedef struct
 	float pitch;
 	
 	float Gx_offset;
+	float pitch_offset;
 }MPU6050_t;
 
 
@@ -48,5 +49,6 @@ void MPU6050_Read_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct);
 void MPU6050_Read_All(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct);
 void MPU6050_ComputePitch(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct, float dt);
 void MPU6050_Calibrate_Gyro(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct);
+void MPU6050_Calculate_PitchOffset(I2C_HandleTypeDef *I2Cx, MPU6050_t *dataStruct);
 
 #endif
