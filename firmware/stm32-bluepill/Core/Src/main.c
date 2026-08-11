@@ -35,6 +35,7 @@
 #define SET_POINT						0.0f
 #define MOTOR_LIMIT 				800
 #define MAX_INTEGRAL				200.0f
+#define PI 									3.14159265358979323846f
 
 
 /* USER CODE END PTD */
@@ -69,6 +70,9 @@ float Kp = 30.0f;
 float Kd = 3.0;
 float Ki = 5.0f;
 float integral = 0.0f;
+
+float Ku = 70.0f;
+float omega_raw, omega_f;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -208,9 +212,11 @@ int main(void)
 				
 			MPU6050_ComputePitch(&hi2c1, &mpu_data, dt);
 			
-			if(fabs(mpu_data.pitch) > 40.0f)
+			if(fabs(mpu_data.pitch) > 30.0f)
 			{
 				Motor_StopAll();
+				u = 0;
+				omega_raw = mpu_data.Gx * PI/180.0f;
 			}else
 			{					
 				error = (SET_POINT + mpu_data.pitch_offset) - (mpu_data.pitch);
@@ -223,11 +229,19 @@ int main(void)
 				{
 					Motor_StopAll();
 					u = 0;
+					omega_raw = mpu_data.Gx * PI/180.0f;
 				}else
-				{					
-					u = Kp * error
-					  + Kd * mpu_data.Gx
-					  + Ki * integral;
+				{	
+//				// PID Controller
+//					u = Kp * error
+//					  + Kd * mpu_data.Gx
+//					  + Ki * integral;
+					
+				 // LQR Controller
+					omega_raw = mpu_data.Gx * PI/180.0f;
+					
+					u = Ku *(- 28.4811 * (((mpu_data.pitch-mpu_data.pitch_offset)*PI/180.0f))
+									 + 3.6417  * omega_raw);
 					
 					if(u > MOTOR_LIMIT) u = MOTOR_LIMIT;
 					if(u < -MOTOR_LIMIT) u = -MOTOR_LIMIT;
@@ -240,7 +254,8 @@ int main(void)
 			if(i==10)
 			{
 				i = 0;
-				printf("Pitch:%.2f, error:%.2f, integral:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, integral, u);
+//				printf("Pitch:%.2f, error:%.2f, integral:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, integral, u);
+				printf("Pitch:%.2f, error:%.2f, Omega:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, omega_raw, u);
 			}
 			
 			i++;

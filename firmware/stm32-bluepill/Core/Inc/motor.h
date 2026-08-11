@@ -7,11 +7,11 @@
 
 #define MOTOR_PWM_MAX_AMP					999
 #define LEFT_FORWARD_DEAD					385
-#define LEFT_BACKWARD_DEAD			 	380
+#define LEFT_BACKWARD_DEAD			  380
 #define RIGHT_FORWARD_DEAD				375
 #define RIGHT_BACKWARD_DEAD			 	375
 
-#define MOTOR_RAMP_STEP			20
+#define MOTOR_RAMP_STEP						20
 
 void Motor_Init(void);
 static int16_t Motor_Clamp(int16_t min, int16_t max, int16_t val);
