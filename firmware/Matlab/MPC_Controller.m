@@ -1,0 +1,113 @@
+
+clc, clear, close all
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+t0 = 0;
+tf = 15;
+ts = 0.01;
+t = t0:ts:tf;
+nt = numel(t);
+
+A = [ 0,     1;
+     327,    0];
+
+B = [   0;
+     -33.33];
+
+C = [1 0];
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+sysc = ss(A, B, C, 0);
+sysd = c2d(sysc, ts, "zoh");
+
+Ad = sysd.A;
+Bd = sysd.B;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+xref = [0, 0]';
+
+Q = diag([100, 5]);
+
+R = 0.5;
+
+Np = 10;
+Nc = 5;
+
+nx = size(Ad, 1);
+nu = size(Bd, 2);
+
+Phi = zeros(Np*nx, nx);
+Gamma = zeros(Np*nx, Nc*nu);
+
+for i=1:Np
+    Phi((i-1)*nx+1:i*nx, :) = Ad^i;
+    for j=1:Nc
+        if i>=j
+            Gamma((i-1)*nx+1:i*nx, (j-1)*nu+1:j*nu) = Ad^(i-j)*Bd;
+        end
+    end
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Qbar = kron(eye(Np), Q);
+Rbar = kron(eye(Nc), R);
+
+H = Gamma'*Qbar*Gamma + Rbar;
+F = Gamma'*Qbar*Phi;
+
+Kall = H \ F;
+
+Kmpc = Kall(1, :)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+x = zeros(nx, nt);
+x(:, 1) = [5, 2];
+
+u = zeros(nt, 1);
+
+for i=1:nt-1
+    
+    u(i) = -Kmpc*x(:, i);
+    
+    if u(i) > 1000
+        u(i) = 1000;
+    end
+
+    if u(i) < -1000
+        u(i) = -1000;
+    end
+
+    if i>1
+        if u(i) > u(i-1) + 20
+           u(i) = u(i-1) + 20;
+        end
+        if u(i) < u(i-1) - 20
+           u(i) = u(i-1) - 20;
+        end
+    end
+
+    x(:, i+1) = Ad*x(:, i) + Bd*u(i);
+    
+end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+figure(1)
+subplot(2, 1, 1)
+plot(t, x, "LineWidth", 2)
+grid on
+xlabel("Time(s)")
+ylabel("Amplitude")
+legend("\theta", "\omega")
+
+subplot(2, 1, 2)
+plot(t, u, "b", "LineWidth", 2)
+grid on
+xlabel("Time(s)")
+ylabel("Amplitude")
+legend("u")

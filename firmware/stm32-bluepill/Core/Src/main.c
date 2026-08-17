@@ -73,6 +73,8 @@ float integral = 0.0f;
 
 float Ku = 70.0f;
 float omega_raw, omega_f;
+
+float Kmpc[2] = {-16.4957, -2.0501};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -238,10 +240,16 @@ int main(void)
 //					  + Ki * integral;
 					
 				 // LQR Controller
-					omega_raw = mpu_data.Gx * PI/180.0f;
+//					omega_raw = mpu_data.Gx * PI/180.0f;
+//					
+//					u = Ku *(- 28.4811 * (((mpu_data.pitch-mpu_data.pitch_offset)*PI/180.0f))
+//										+ 3.6417  * omega_raw);
 					
-					u = Ku *(- 28.4811 * (((mpu_data.pitch-mpu_data.pitch_offset)*PI/180.0f))
-									 + 3.6417  * omega_raw);
+					
+					// MPC Controller
+					u =  Kmpc[0]*mpu_data.pitch  
+						-  Kmpc[1]*mpu_data.Gx;
+					
 					
 					if(u > MOTOR_LIMIT) u = MOTOR_LIMIT;
 					if(u < -MOTOR_LIMIT) u = -MOTOR_LIMIT;
