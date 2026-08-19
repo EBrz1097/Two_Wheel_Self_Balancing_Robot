@@ -75,6 +75,9 @@ float Ku = 70.0f;
 float omega_raw, omega_f;
 
 float Kmpc[2] = {-16.4957, -2.0501};
+
+float du, u_prev=0;
+float Kmpc_aug[3] = {-9.8669, -1.8597, 0.8438};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -247,8 +250,16 @@ int main(void)
 					
 					
 					// MPC Controller
-					u =  Kmpc[0]*mpu_data.pitch  
-						-  Kmpc[1]*mpu_data.Gx;
+//					u =  Kmpc[0]*mpu_data.pitch  
+//						-  Kmpc[1]*mpu_data.Gx;
+					
+					// Augmented MPC Controller
+					du = -(Kmpc_aug[0] * mpu_data.pitch 
+					   - Kmpc_aug[1] * mpu_data.Gx
+					   + Kmpc_aug[2] * u_prev);
+					
+					u = -(du + u_prev);
+					u_prev = u;
 					
 					
 					if(u > MOTOR_LIMIT) u = MOTOR_LIMIT;
@@ -263,7 +274,7 @@ int main(void)
 			{
 				i = 0;
 //				printf("Pitch:%.2f, error:%.2f, integral:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, integral, u);
-				printf("Pitch:%.2f, error:%.2f, Omega:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, omega_raw, u);
+				printf("Pitch:%.2f, error:%.2f, Gx:%.2f, u:%.2f\r\n", (mpu_data.pitch-mpu_data.pitch_offset), error, mpu_data.Gx, u);
 			}
 			
 			i++;
