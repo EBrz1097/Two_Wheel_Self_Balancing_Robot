@@ -52,7 +52,7 @@ for i=1:Np
     end
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%e44
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 Qbar = kron(eye(Np), Qz);
 Rbar = kron(eye(Nc), Rdu);

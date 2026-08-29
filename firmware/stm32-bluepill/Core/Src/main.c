@@ -78,6 +78,8 @@ float Kmpc[2] = {-16.4957, -2.0501};
 
 float du, u_prev=0;
 float Kmpc_aug[3] = {-9.8669, -1.8597, 0.8438};
+
+float Kql[3] = {-46.1124,  -2.70406};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -254,13 +256,16 @@ int main(void)
 //						-  Kmpc[1]*mpu_data.Gx;
 					
 					// Augmented MPC Controller
-					du = -(Kmpc_aug[0] * mpu_data.pitch 
-					   - Kmpc_aug[1] * mpu_data.Gx
-					   + Kmpc_aug[2] * u_prev);
-					
-					u = -(du + u_prev);
-					u_prev = u;
-					
+//					du = -(Kmpc_aug[0] * mpu_data.pitch 
+//					   - Kmpc_aug[1] * mpu_data.Gx
+//					   + Kmpc_aug[2] * u_prev);
+//					
+//					u = -(du + u_prev);
+//					u_prev = u;
+
+					// Simple Q-Learning Controller
+					u =  Kql[0]*mpu_data.pitch  
+						-  Kql[1]*mpu_data.Gx;
 					
 					if(u > MOTOR_LIMIT) u = MOTOR_LIMIT;
 					if(u < -MOTOR_LIMIT) u = -MOTOR_LIMIT;
